@@ -140,10 +140,14 @@ public class MapView : Window
     public int ActiveEntrance
     {
         get => HoveredObject is EntranceObject entrance ? entrance.Number : -1;
-        set => HoveredObject = map != null && value >= 0 && value < map.Entrances.Length
+        set => HoveredObject = map != null && value >= 0 && value < map.Entrances.Length && HasLocation(value)
             ? new EntranceObject(map.Entrances[value], value)
             : null;
     }
+
+    // Saves can predate map-defined locations whose entrances already exist on the world map.
+    bool HasLocation(int entrance) =>
+        !(app.GameState is ClassicGame game && game.MainMapView && entrance >= game.World.Locations.Count);
 
     public IMapObject? HoveredObject { get; set; }
 
@@ -362,7 +366,7 @@ public class MapView : Window
             {
                 int entrance = entranceOverlay.HitTestEntrance(position,
                     ScrollPosition, Size);
-                if (entrance >= 0)
+                if (entrance >= 0 && HasLocation(entrance))
                     return entrance;
             }
         }
@@ -370,7 +374,7 @@ public class MapView : Window
         if (map != null)
         {
             for (int i = map.Entrances.Length - 1; i >= 0; i--)
-                if (map.Entrances[i].Area.PointInside(position - ScrollPosition))
+                if (map.Entrances[i].Area.PointInside(position - ScrollPosition) && HasLocation(i))
                     return i;
         }
 

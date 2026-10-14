@@ -182,15 +182,16 @@ namespace Burntime.Remaster
             ItemTypes["item_loaded_rifle"].Empty = ItemTypes["item_unloaded_rifle"];
 
             GameCreation.RefreshProductionSettings(this);
-            // New Village is defined by map configuration rather than GAM.DAT.
-            if (World.Locations.Count > 37)
+            // Locations after the original 37 are defined by map configuration rather than GAM.DAT.
+            for (int i = 37; i < World.Locations.Count; i++)
             {
+                string configPath = $"maps/mat_{i + 1:D3}.txt";
                 var config = new Burntime.Platform.IO.ConfigFile();
-                if (Burntime.Platform.IO.FileSystem.ExistsFile("maps/mat_038.txt") &&
-                    config.Open("maps/mat_038.txt"))
-                    LocationCreator.ApplyEnvironment(World.Locations[37], config, ResourceManager);
-                if (World.Locations[37].Rooms.Count > 3)
-                    World.Locations[37].Rooms[3].IsWaterSource = true;
+                if (Burntime.Platform.IO.FileSystem.ExistsFile(configPath) && config.Open(configPath))
+                    LocationCreator.ApplyEnvironment(World.Locations[i], config, ResourceManager);
+                // New Village's well room predates the room type in its map configuration.
+                if (i == 37 && World.Locations[i].Rooms.Count > 3)
+                    World.Locations[i].Rooms[3].IsWaterSource = true;
             }
             GameCreation.RefreshExtendedTraderSettings(this);
             foreach (Player player in World.Players)

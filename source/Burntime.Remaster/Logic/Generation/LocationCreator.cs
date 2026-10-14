@@ -84,7 +84,6 @@ namespace Burntime.Remaster.Logic.Generation
                 updateBurngfxLocation(loc.Id, neighborIds, wayLengths, game.World.Locations);
 
                 game.World.Locations += loc;
-                i++;
             }
 
             // update neighbor links

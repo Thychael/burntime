@@ -193,7 +193,7 @@ image =
 
 [room38]
 type = 
-title = newlocations?0
+title = newlocations?1
 image = 
 
 

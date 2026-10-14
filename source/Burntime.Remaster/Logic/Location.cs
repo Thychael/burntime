@@ -16,7 +16,8 @@ public class Location : StateObject, IUpdateable, ITurnable
     #region Map
 
     [DiagnosticOnly]
-    internal string Title => ResourceManager.GetString($"burn?{Id}");
+    // BURN.TXT has name slots only up to New Village (37); later locations use newlocations.txt.
+    internal string Title => ResourceManager.GetString(Id <= 37 ? $"burn?{Id}" : $"newlocations?{Id - 37}");
 
     public int Id;
     public static implicit operator int(Location right)

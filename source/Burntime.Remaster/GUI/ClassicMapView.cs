@@ -34,12 +34,21 @@ namespace Burntime.Remaster.GUI
                 if (p.IsDead)
                     continue;
 
-                if (p.IsTraveling)
+                if (p.IsTraveling && p.Destination != null)
                 {
-                    for (int j = 0; j < p.Location.Neighbors.Count; j++)
+                    // Look the way up by its end points: map-defined locations have no
+                    // GAM.DAT way ids, so Location.Ways can be shorter than Neighbors.
+                    int from = p.Location.Id;
+                    if (from >= 0 && from < Ways.Cross.Length && Ways.Cross[from].Ways != null)
                     {
-                        if (p.Location.Neighbors[j] == p.Destination)
-                            renderWays.Add(p.Location.Ways[j]);
+                        foreach (int way in Ways.Cross[from].Ways)
+                        {
+                            if (Ways.Ways[way].Start == p.Destination.Id || Ways.Ways[way].End == p.Destination.Id)
+                            {
+                                renderWays.Add(way);
+                                break;
+                            }
+                        }
                     }
                 }
             }
