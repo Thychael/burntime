@@ -16,3 +16,7 @@ __pycache__
 .cache
 /packaging/steam/local.conf
 reverse-engineering
+
+# Logs from starting the game in the repository root
+/log.txt
+/log.*.txt
