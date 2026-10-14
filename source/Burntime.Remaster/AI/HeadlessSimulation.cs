@@ -18,6 +18,7 @@ public sealed class HeadlessSimulationOptions
     public int Difficulty { get; init; } = 2;
     public int[]? AiDifficulties { get; init; }
     public AiProfile[]? AiProfiles { get; init; }
+    public int? AiOpponents { get; init; }
     public int Seed { get; init; } = 1;
     public RuleSet Rules { get; init; } = RuleSet.Dos;
     public AiProfile AI { get; init; } = AiProfile.Modern;
@@ -69,6 +70,7 @@ public static class HeadlessSimulation
                 Difficulty = options.Difficulty,
                 AiDifficulties = options.AiDifficulties,
                 AiProfiles = options.AiProfiles,
+                AiOpponents = options.AiOpponents,
                 ColorOne = BurntimePlayerColor.Green,
                 ColorTwo = BurntimePlayerColor.Red,
                 Rules = options.Rules,
@@ -251,8 +253,9 @@ public static class HeadlessSimulation
             throw new InvalidDataException(
                 $"Smoke invariant failed: expected {options.Rules} rules, loaded {game.Rules}.");
 
-        AiProfile[] expected = options.AiProfiles ??
-            Enumerable.Repeat(options.AI, game.World.Players.Count).ToArray();
+        AiProfile[] expected = (options.AiProfiles ??
+            Enumerable.Repeat(options.AI, game.World.Players.Count).ToArray())
+            .Select((profile, slot) => GameCreation.LimitOpponents(profile, slot, options.AiOpponents)).ToArray();
         AiProfile[] actual = game.World.Players.Select(AiStateOperations.GetProfile).ToArray();
         if (!expected.SequenceEqual(actual))
         {

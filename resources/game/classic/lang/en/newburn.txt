@@ -118,3 +118,4 @@ a defective metal detector}
 Do you really want to
 dismiss me?
 All right, you're staying with me.
+Number of AI opponents

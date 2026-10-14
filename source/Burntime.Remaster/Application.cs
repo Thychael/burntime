@@ -270,7 +270,7 @@ namespace Burntime.Remaster
         }
 
         public void RememberNewGamePreferences(int difficulty, RuleSet rules,
-            AiProfile ai)
+            AiProfile ai, int aiOpponents = NewGamePreferences.MaxAiOpponents)
         {
             NewGameDefaults = new NewGamePreferences(
                 System.Math.Clamp(difficulty, 1, 3),
@@ -280,7 +280,8 @@ namespace Burntime.Remaster
                     AiProfile.Amiga => AiProfile.Amiga,
                     AiProfile.None => AiProfile.None,
                     _ => AiProfile.Modern
-                });
+                },
+                System.Math.Clamp(aiOpponents, 1, NewGamePreferences.MaxAiOpponents));
             SaveUserSettings();
         }
 

@@ -118,3 +118,4 @@ einen defekten Metalldetektor}
 Willst du mich wirklich
 entlassen?
 Also gut, du bleibst bei mir.
+Anzahl KI-Gegner

@@ -94,8 +94,52 @@ static class GameDefinitionsTests
             Equal("1", settings.GetString("mode_difficulty"), "difficulty text");
             Equal("extended", settings.GetString("mode_rules"), "rules text");
             Equal("remaster", settings.GetString("mode_opponent"), "AI text");
+            Equal("3", settings.GetString("mode_opponent_count"), "opponent count text");
             return 0;
         });
+        yield return Int("opponent count defaults to all three", 3, () =>
+        {
+            ConfigFile config = new();
+            return NewGamePreferences.Load(config.GetSection("", true)).AiOpponents;
+        });
+        foreach ((string stored, int expected) in new[] { ("1", 1), ("2", 2), ("3", 3), ("0", 3), ("4", 3), ("x", 3) })
+            yield return Int($"opponent count loads '{stored}'", expected, () =>
+            {
+                ConfigFile config = new();
+                ConfigSection settings = config.GetSection("", true);
+                settings.Set("mode_opponent_count", stored);
+                return NewGamePreferences.Load(settings).AiOpponents;
+            });
+        yield return Int("opponent count round trip", 1, () =>
+        {
+            ConfigFile config = new();
+            ConfigSection settings = config.GetSection("", true);
+            (NewGamePreferences.Default with { AiOpponents = 1 }).Store(settings);
+            return NewGamePreferences.Load(settings).AiOpponents;
+        });
+    }
+
+    internal static IEnumerable<Case<int>> OpponentLimitCases()
+    {
+        // Each case: requested opponents, then the expected profile of AI slots 0-3.
+        var cases = new (int? Opponents, AiProfile[] Expected)[]
+        {
+            (null, [AiProfile.Modern, AiProfile.Modern, AiProfile.Modern, AiProfile.Modern]),
+            (3, [AiProfile.Modern, AiProfile.Modern, AiProfile.Modern, AiProfile.None]),
+            (2, [AiProfile.Modern, AiProfile.Modern, AiProfile.None, AiProfile.None]),
+            (1, [AiProfile.Modern, AiProfile.None, AiProfile.None, AiProfile.None]),
+            (0, [AiProfile.None, AiProfile.None, AiProfile.None, AiProfile.None]),
+            (-2, [AiProfile.None, AiProfile.None, AiProfile.None, AiProfile.None]),
+        };
+        foreach (var (opponents, expected) in cases)
+            yield return Int($"opponent limit {opponents?.ToString() ?? "none"}", 0, () =>
+            {
+                for (int slot = 0; slot < expected.Length; slot++)
+                    Equal(expected[slot], GameCreation.LimitOpponents(AiProfile.Modern, slot, opponents), $"AI slot {slot}");
+                return 0;
+            });
+        yield return Int("opponent limit keeps disabled slots disabled", (int)AiProfile.None,
+            () => (int)GameCreation.LimitOpponents(AiProfile.None, 0, 3));
     }
 
     internal static IEnumerable<Case<int>> RuleRegistryCases()

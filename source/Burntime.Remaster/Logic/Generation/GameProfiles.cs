@@ -19,8 +19,10 @@ public enum AiProfile
     Amiga = 3
 }
 
-public sealed record NewGamePreferences(int Difficulty, RuleSet Rules, AiProfile Ai)
+public sealed record NewGamePreferences(int Difficulty, RuleSet Rules, AiProfile Ai, int AiOpponents = 3)
 {
+    public const int MaxAiOpponents = 3;
+
     public static NewGamePreferences Default { get; } = new(
         1, RuleSet.Extended, AiProfile.Modern);
 
@@ -42,7 +44,10 @@ public sealed record NewGamePreferences(int Difficulty, RuleSet Rules, AiProfile
             "none" or "off" => AiProfile.None,
             _ => AiProfile.Modern
         };
-        return new(difficulty, rules, ai);
+        int opponents = settings.GetInt("mode_opponent_count");
+        if (opponents is < 1 or > MaxAiOpponents)
+            opponents = Default.AiOpponents;
+        return new(difficulty, rules, ai, opponents);
     }
 
     public bool Store(ConfigSection settings)
@@ -58,10 +63,12 @@ public sealed record NewGamePreferences(int Difficulty, RuleSet Rules, AiProfile
             !settings.GetString("mode_rules").Equals(gameMode,
                 StringComparison.OrdinalIgnoreCase) ||
             !settings.GetString("mode_opponent").Equals(ai,
-                StringComparison.OrdinalIgnoreCase);
+                StringComparison.OrdinalIgnoreCase) ||
+            settings.GetString("mode_opponent_count") != AiOpponents.ToString();
         settings.Set("mode_difficulty", Difficulty);
         settings.Set("mode_rules", gameMode);
         settings.Set("mode_opponent", ai);
+        settings.Set("mode_opponent_count", AiOpponents);
         return changed;
     }
 }

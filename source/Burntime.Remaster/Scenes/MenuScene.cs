@@ -24,6 +24,7 @@ public class MenuScene : Scene
         Difficulty,
         GameMode,
         AiPlayers,
+        AiOpponents,
         Notes,
         Exit
     }
@@ -42,6 +43,7 @@ public class MenuScene : Scene
     Toggle Difficulty;
     Toggle GameMode;
     Toggle AiPlayers;
+    Toggle AiOpponents;
     readonly Toggle[] _colorChoices = new Toggle[2];
     readonly BurntimePlayerColor[] _playerColors = { BurntimePlayerColor.Green, BurntimePlayerColor.Red };
     int _currentPlayer;
@@ -52,6 +54,7 @@ public class MenuScene : Scene
     readonly Button _notesButton;
     readonly GUI.ManualWindow _setupNotes;
     readonly TooltipWindow _aiTooltip;
+    readonly TooltipWindow _opponentsTooltip;
     readonly TooltipWindow _gameModeTooltip;
     readonly TooltipWindow _difficultyTooltip;
     readonly GuiFont _setupTooltipFont;
@@ -297,9 +300,31 @@ public class MenuScene : Scene
         };
         _aiTooltip.Hide();
 
+        // number of ai opponents: state 0-2 = 3-1 opponents
+        AiOpponents = new(app)
+        {
+            Position = new(235, 149),
+            ToolTipFont = _setupTooltipFont
+        };
+        for (int count = NewGamePreferences.MaxAiOpponents; count >= 1; count--)
+            AiOpponents.AddState(null, $"gfx/ui/start_button_ai{count}.png", $"gfx/ui/start_button_ai{count}_down.png",
+                $"gfx/ui/start_button_ai{count}_down.png", "@newburn?120");
+        AiOpponents.ToolTipFont = null;
+        Windows += AiOpponents;
+
+        Windows += _opponentsTooltip = new TooltipWindow(app)
+        {
+            Position = new Vector2(235, 145),
+            VerticalAlignment = PositionAlignment.Right,
+            MinimumWidth = 140,
+            Layer = 30
+        };
+        _opponentsTooltip.Hide();
+
         BindTouchSetupTooltip(Difficulty, SetupSelection.Difficulty);
         BindTouchSetupTooltip(GameMode, SetupSelection.GameMode);
         BindTouchSetupTooltip(AiPlayers, SetupSelection.AiPlayers);
+        BindTouchSetupTooltip(AiOpponents, SetupSelection.AiOpponents);
 
     }
 
@@ -663,6 +688,7 @@ public class MenuScene : Scene
         Difficulty.IsKeyboardSelected = showSelection && _setupSelection == SetupSelection.Difficulty;
         GameMode.IsKeyboardSelected = showSelection && _setupSelection == SetupSelection.GameMode;
         AiPlayers.IsKeyboardSelected = showSelection && _setupSelection == SetupSelection.AiPlayers;
+        AiOpponents.IsKeyboardSelected = showSelection && _setupSelection == SetupSelection.AiOpponents;
         _exitButton.IsKeyboardSelected = showSelection && _setupSelection == SetupSelection.Exit;
         _notesButton.IsKeyboardSelected = showSelection && _setupSelection == SetupSelection.Notes;
     }
@@ -677,6 +703,7 @@ public class MenuScene : Scene
         SetupSelection.Difficulty => Difficulty.IsKeyboardSelected,
         SetupSelection.GameMode => GameMode.IsKeyboardSelected,
         SetupSelection.AiPlayers => AiPlayers.IsKeyboardSelected,
+        SetupSelection.AiOpponents => AiOpponents.IsKeyboardSelected,
         SetupSelection.Exit => _exitButton.IsKeyboardSelected,
         SetupSelection.Notes => _notesButton.IsKeyboardSelected,
         _ => false
@@ -701,14 +728,17 @@ public class MenuScene : Scene
         Difficulty.ToolTipFont = legacyTooltipFont;
         GameMode.ToolTipFont = legacyTooltipFont;
         AiPlayers.ToolTipFont = legacyTooltipFont;
+        AiOpponents.ToolTipFont = legacyTooltipFont;
         if (!showUIHints)
         {
             _aiTooltip.Hide();
+            _opponentsTooltip.Hide();
             _gameModeTooltip.Hide();
             _difficultyTooltip.Hide();
             return;
         }
         UpdateAiTooltip();
+        UpdateOpponentsTooltip();
         UpdateGameModeTooltip();
         UpdateDifficultyTooltip();
     }
@@ -759,6 +789,20 @@ public class MenuScene : Scene
         };
         SetSetupTooltip(_aiTooltip, section);
     }
+
+    void UpdateOpponentsTooltip()
+    {
+        if (!ShouldShowSetupTooltip(AiOpponents, SetupSelection.AiOpponents))
+        {
+            _opponentsTooltip.Hide();
+            return;
+        }
+
+        // tooltip sections 14-16 describe 1-3 opponents
+        SetSetupTooltip(_opponentsTooltip, 13 + SelectedAiOpponents);
+    }
+
+    int SelectedAiOpponents => NewGamePreferences.MaxAiOpponents - AiOpponents.State;
 
     bool ShouldShowSetupTooltip(Button button, SetupSelection selection) =>
         app.LastInputMode == InputMode.Touch
@@ -811,6 +855,7 @@ public class MenuScene : Scene
         _touchTooltipHeld = false;
         _touchTooltipRemaining = 0;
         _aiTooltip.Hide();
+        _opponentsTooltip.Hide();
         _gameModeTooltip.Hide();
         _difficultyTooltip.Hide();
     }
@@ -855,6 +900,9 @@ public class MenuScene : Scene
             case SetupSelection.AiPlayers:
                 AiPlayers.NextState();
                 break;
+            case SetupSelection.AiOpponents:
+                AiOpponents.NextState();
+                break;
             case SetupSelection.Exit:
                 OnButtonExit();
                 break;
@@ -880,6 +928,7 @@ public class MenuScene : Scene
                 SelectPlayer(0, activateName: true);
                 return;
             case SetupSelection.AiPlayers:
+            case SetupSelection.AiOpponents:
             case SetupSelection.Exit:
                 SelectPlayer(1, activateName: true);
                 return;
@@ -945,7 +994,7 @@ public class MenuScene : Scene
         }
 
         if (_setupSelection is not (SetupSelection.Difficulty or SetupSelection.GameMode or
-            SetupSelection.AiPlayers or SetupSelection.Notes or SetupSelection.Exit))
+            SetupSelection.AiPlayers or SetupSelection.AiOpponents or SetupSelection.Notes or SetupSelection.Exit))
             return;
 
         int index = _setupSelection switch
@@ -954,15 +1003,17 @@ public class MenuScene : Scene
             SetupSelection.Difficulty => 1,
             SetupSelection.GameMode => 2,
             SetupSelection.AiPlayers => 3,
-            _ => 4
+            SetupSelection.AiOpponents => 4,
+            _ => 5
         };
-        index = System.Math.Clamp(index + direction, 0, 4);
+        index = System.Math.Clamp(index + direction, 0, 5);
         _setupSelection = index switch
         {
             0 => SetupSelection.Notes,
             1 => SetupSelection.Difficulty,
             2 => SetupSelection.GameMode,
             3 => SetupSelection.AiPlayers,
+            4 => SetupSelection.AiOpponents,
             _ => SetupSelection.Exit
         };
         UpdateSetupSelection();
@@ -1037,11 +1088,12 @@ public class MenuScene : Scene
                 1 => AiProfile.Amiga,
                 2 => AiProfile.None,
                 _ => AiProfile.Modern
-            }
+            },
+            AiOpponents = SelectedAiOpponents
         };
 
         BurntimeClassic.Instance.RememberNewGamePreferences(
-            Info.Difficulty + 1, Info.Rules, Info.AI);
+            Info.Difficulty + 1, Info.Rules, Info.AI, SelectedAiOpponents);
 
         creation.CreateNewGame(Info);
 
@@ -1074,6 +1126,7 @@ public class MenuScene : Scene
             AiProfile.None => 2,
             _ => 0
         };
+        AiOpponents.State = NewGamePreferences.MaxAiOpponents - preferences.AiOpponents;
         SetCurrentPlayerEnabled(true);
         SelectStart();
     }

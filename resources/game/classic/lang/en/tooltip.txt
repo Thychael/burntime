@@ -93,3 +93,18 @@ Ranged}
 Equipped}
 Passive while carried}
 Not thirsty
+}#
+1 opponent
+One computer controlled enemy.
+Ignored without AI.
+Change to 3 opponents
+}#
+2 opponents
+Two computer controlled enemies.
+Ignored without AI.
+Change to 1 opponent
+}#
+3 opponents
+Three computer controlled
+enemies, like the original.
+Change to 2 opponents

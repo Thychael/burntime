@@ -93,3 +93,18 @@ Fern}
 Ausgerüstet}
 Wirkt beim Mitführen}
 Kein Durst
+}#
+1 Gegner
+Ein computergesteuerter Gegner.
+Ohne KI wirkungslos.
+Zu 3 Gegnern wechseln
+}#
+2 Gegner
+Zwei computergesteuerte Gegner.
+Ohne KI wirkungslos.
+Zu 1 Gegner wechseln
+}#
+3 Gegner
+Drei computergesteuerte Gegner,
+wie im Original.
+Zu 2 Gegnern wechseln

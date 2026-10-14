@@ -61,6 +61,7 @@ static class Program
         Run("profile parsing", GameDefinitionsTests.ProfileParsingCases());
         Run("player flag choices", GameDefinitionsTests.PlayerColorCases());
         Run("rule registry", GameDefinitionsTests.RuleRegistryCases());
+        Run("AI opponent count", GameDefinitionsTests.OpponentLimitCases());
         Run("manual text layout", ManualTextLayoutTests.Cases());
         Run("setup patch notes", SetupPatchNotesTests.Cases());
         Run("resolution scaling", ResolutionTests.ResolutionCases());

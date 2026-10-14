@@ -22,6 +22,8 @@ namespace Burntime.Remaster.Logic.Generation
         public AiProfile AI;
         public AiProfile[] AiProfiles;
         public int[] AiDifficulties;
+        /// <summary>Number of active AI opponents; null keeps every AI slot active.</summary>
+        public int? AiOpponents;
     }
 
     enum BurntimePlayerColor
@@ -259,6 +261,7 @@ namespace Burntime.Remaster.Logic.Generation
             app.Server.AddAI(new AI.AiPlayer(app, 3, container));
 
             // add ai state objects
+            int aiSlot = 0;
             foreach (Player p in game.World.Players)
             {
                 if (p.Type == PlayerType.Ai)
@@ -267,6 +270,7 @@ namespace Burntime.Remaster.Logic.Generation
                         p.Index < Info.AiProfiles.Length
                         ? Info.AiProfiles[p.Index]
                         : Info.AI;
+                    profile = LimitOpponents(profile, aiSlot++, Info.AiOpponents);
                     bool explicitDifficulty = Info.AiDifficulties != null &&
                         p.Index < Info.AiDifficulties.Length;
                     AI.AiSettings aiSettings = explicitDifficulty
@@ -289,6 +293,13 @@ namespace Burntime.Remaster.Logic.Generation
                     client.Die();
             }
         }
+
+        /// <summary>
+        /// AI slots beyond the requested number of opponents are disabled like "No AI" slots.
+        /// <paramref name="aiSlot"/> counts AI-controlled players only, in player order.
+        /// </summary>
+        internal static AiProfile LimitOpponents(AiProfile profile, int aiSlot, int? opponents) =>
+            opponents is int count && aiSlot >= System.Math.Max(0, count) ? AiProfile.None : profile;
 
         void InitializeStartingPlayers(ClassicGame game,
             Burntime.Data.BurnGfx.Save.SaveGame gamdat)
