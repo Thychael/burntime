@@ -194,6 +194,8 @@ namespace Burntime.Remaster
                     World.Locations[i].Rooms[3].IsWaterSource = true;
             }
             GameCreation.RefreshExtendedTraderSettings(this);
+            // Older Extended saves get the larger inventories as well.
+            Logic.Rules.InventoryRules.Apply(this);
             foreach (Player player in World.Players)
             {
                 Burntime.Remaster.AI.AiStateOperations.InitAfterLoad(player.AiState);

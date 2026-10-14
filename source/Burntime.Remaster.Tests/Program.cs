@@ -72,6 +72,7 @@ static class Program
         Run("log file lifetime", LogLifecycleTests.Cases());
         Run("world generation", WorldGeneratorTests.Cases());
         Run("random sites", RandomSitesTests.Cases());
+        Run("inventory rules", InventoryRulesTests.Cases());
 
         Console.WriteLine($"Rule formulas: {passed} passed, {failed} failed.");
         return failed == 0 ? 0 : 1;

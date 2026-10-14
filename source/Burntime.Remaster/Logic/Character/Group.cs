@@ -169,7 +169,7 @@ namespace Burntime.Remaster.Logic
 
             foreach (Character ch in characterList)
             {
-                count += ch.Items.MaxCount - ch.Items.Count;
+                count += ch.FreeSlots;
             }
 
             return count;
@@ -178,7 +178,7 @@ namespace Burntime.Remaster.Logic
         public void MoveItems(IItemCollection items)
         {
             foreach (Character ch in characterList)
-                ch.Items.Move(items);
+                ch.TakeItems(items);
         }
 
         public Item FindFood(out IItemCollection owner)

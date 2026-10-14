@@ -192,6 +192,55 @@ namespace Burntime.Remaster.Logic
             set { protection = value; }
         }
 
+        [System.Runtime.Serialization.OptionalField]
+        bool hasWeaponSlot;
+
+        /// <summary>
+        /// Extended rules: one of the inventory slots only holds the active weapon
+        /// (see <see cref="InventoryRules"/>). The weapon stays in <see cref="Items"/>.
+        /// </summary>
+        public bool HasWeaponSlot
+        {
+            get => hasWeaponSlot;
+            set => hasWeaponSlot = value;
+        }
+
+        /// <summary>Slots for everything except the weapon slot.</summary>
+        public int BagCapacity => Items.MaxCount == ItemList.Infinite || !hasWeaponSlot
+            ? Items.MaxCount
+            : Items.MaxCount - InventoryRules.WeaponSlots;
+
+        int NonWeaponCount => Enumerable.Count(Items, item => !item.Type.IsClass("weapon"));
+
+        /// <summary>
+        /// Item shown in the weapon slot: the active weapon, or a weapon that does not fit into the
+        /// bag. Null without a weapon slot.
+        /// </summary>
+        public Item? SlotWeapon
+        {
+            get
+            {
+                if (!hasWeaponSlot)
+                    return null;
+                if (Weapon != null)
+                    return Weapon;
+                if (Items.Count <= BagCapacity)
+                    return null;
+                // More items than bag slots: one of them must be a weapon, unless something bypassed
+                // CanTake; then show the last item rather than hiding it.
+                return Enumerable.FirstOrDefault(Items, item => item.Type.IsClass("weapon")) ?? Items[Items.Count - 1];
+            }
+        }
+
+        /// <summary>Whether the item fits: weapons may use the weapon slot, other items only the bag.</summary>
+        public bool CanTake(Item item) => item != null &&
+            !Items.IsFull && (!hasWeaponSlot || item.Type.IsClass("weapon") || NonWeaponCount < BagCapacity);
+
+        /// <summary>Free slots for any item (the weapon slot only counts while it can take anything).</summary>
+        public int FreeSlots => hasWeaponSlot && Items.MaxCount != ItemList.Infinite
+            ? System.Math.Max(0, System.Math.Min(Items.MaxCount - Items.Count, BagCapacity - NonWeaponCount))
+            : Items.MaxCount - Items.Count;
+
         public virtual int BaseAttackValue => DEFAULT_ATTACK_VALUE;
         internal int CombatExperience(GameSettings settings) =>
             RuleFormulas.CombatExperience(settings.IsFightClass(Class), Experience);
@@ -1317,12 +1366,25 @@ namespace Burntime.Remaster.Logic
 
         int ICharacterCollection.GetFreeSlotCount()
         {
-            return Items.MaxCount - Items.Count;
+            return FreeSlots;
         }
 
         void ICharacterCollection.MoveItems(IItemCollection items)
         {
-            Items.Move(items);
+            TakeItems(items);
+        }
+
+        /// <summary>Takes as many items as fit, respecting the weapon slot; the rest stays in the collection.</summary>
+        public void TakeItems(IItemCollection items)
+        {
+            if (!hasWeaponSlot)
+            {
+                Items.Move(items);
+                return;
+            }
+            foreach (Item item in Enumerable.ToList(items))
+                if (CanTake(item) && Items.Add(item))
+                    items.Remove(item);
         }
 
         bool ICharacterCollection.IsInRange(Character leader, Character character)

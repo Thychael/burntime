@@ -161,6 +161,9 @@ namespace Burntime.Remaster.Logic.Generation
             // Append custom residents after original item ownership indices have been resolved.
             new LocationPopulationCreator().Create(game, gamdat, app.ResourceManager);
 
+            // Extended rules: larger inventories with a weapon slot (before starting items are handed out)
+            Rules.InventoryRules.Apply(game);
+
             // Player-owned starting state belongs to the controlling rules or AI profile.
             InitializeStartingPlayers(game, gamdat);
 

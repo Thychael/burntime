@@ -308,7 +308,7 @@ namespace Burntime.Remaster.Scenes
             Item? focusedItem = source.FocusedItem;
             return focusedItem != null &&
                 (source == offer
-                    ? inventory.Grid.Count < inventory.Grid.MaxCount
+                    ? ActiveCharacter.CanTake(focusedItem)
                     : offer.Count < offer.MaxCount && CanOffer(focusedItem));
         }
 
@@ -334,20 +334,19 @@ namespace Burntime.Remaster.Scenes
             if (state is not Item item || !CanOffer(item) || !offer.Add(item))
                 return;
 
-            inventory.Grid.Remove(item);
             ActiveCharacter.Items.Remove(item);
-            inventory.RefreshCombatLoadout();
+            inventory.RefreshItems();
             OnOfferChanged();
             keyboardNavigation.ItemsChanged();
         }
 
         void OnLeftClickItemOffer(Framework.States.StateObject state)
         {
-            if (!serviceReady || state is not Item item || !inventory.Grid.Add(item))
+            if (!serviceReady || state is not Item item || !ActiveCharacter.CanTake(item))
                 return;
 
             ActiveCharacter.Items.Add(item);
-            inventory.RefreshCombatLoadout();
+            inventory.RefreshItems();
             offer.Remove(item);
             OnOfferChanged();
             keyboardNavigation.ItemsChanged();

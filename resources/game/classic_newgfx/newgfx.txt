@@ -320,6 +320,7 @@ munt.raw?26=gfx/ui/menu_bottom.png
 gfx/up.png=gfx/up.png
 gfx/down.png=gfx/down.png
 gfx/inventory_left.png=gfx/inventory_left.png
+gfx/ui/weapon_slot.png=gfx/ui/weapon_slot.png
 inv.raw?1=gfx/inventory_middle.png
 inv.raw?2=gfx/inventory_right.png
 munt.raw?5=pngsheet@gfx/inventory_buttons.png?0?30x36

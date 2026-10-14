@@ -327,9 +327,9 @@ namespace Burntime.Remaster.Scenes
         {
             Item? focusedItem = source.FocusedItem;
             return focusedItem != null && grid != null &&
-                (source == inventory.Grid
+                (source == inventory.Grid || source == inventory.WeaponGrid
                     ? grid.Count < grid.MaxCount
-                    : inventory.Grid.Count < inventory.Grid.MaxCount);
+                    : inventory.ActiveCharacter.CanTake(focusedItem));
         }
 
         void AddGridPrompts(ItemGridWindow promptGrid, bool isInInventory)
@@ -444,6 +444,9 @@ namespace Burntime.Remaster.Scenes
             itemTooltip.ClearGrids();
             itemTooltip.AddGrid(inventory.Grid, ItemTooltipSide.Right,
                 item => GetItemTooltipDetails(item, true, inventory.Grid));
+            if (inventory.WeaponGrid != null)
+                itemTooltip.AddGrid(inventory.WeaponGrid, ItemTooltipSide.Right,
+                    item => GetItemTooltipDetails(item, true, inventory.WeaponGrid));
 
             if (classic.InventoryRoom != null)
             {
@@ -676,7 +679,7 @@ namespace Burntime.Remaster.Scenes
                     classic.Game.World.ActiveLocationObj.Source.RefillItem(item);
 
                 grid.Add(item);
-                inventory.Grid.Remove(item);
+                inventory.RefreshItems();
             }
             else if (classic.PickItems != null)
             {
@@ -684,7 +687,7 @@ namespace Burntime.Remaster.Scenes
                 inventory.ActiveCharacter.Items.Remove(state as Item);
 
                 grid.Add(state as Item);
-                inventory.Grid.Remove(state as Item);
+                inventory.RefreshItems();
             }
 
             inventory.RefreshCombatLoadout();
@@ -707,12 +710,12 @@ namespace Burntime.Remaster.Scenes
                     if (item.Type.Empty != null)
                     {
                         item.MakeEmpty();
-                        inventory.Grid.Update(item);
+                        inventory.RefreshItems();
                     }
                     else
                     {
                         inventory.ActiveCharacter.Items.Remove(item);
-                        inventory.Grid.Remove(item);
+                        inventory.RefreshItems();
                     }
                 }
             }
@@ -727,12 +730,12 @@ namespace Burntime.Remaster.Scenes
                     if (item.Type.Empty != null)
                     {
                         item.MakeEmpty();
-                        inventory.Grid.Update(item);
+                        inventory.RefreshItems();
                     }
                     else
                     {
                         inventory.ActiveCharacter.Items.Remove(item);
-                        inventory.Grid.Remove(item);
+                        inventory.RefreshItems();
                     }
                 }
             }
@@ -750,8 +753,7 @@ namespace Burntime.Remaster.Scenes
                             item.MakeFull();
 
                             // refresh item
-                            inventory.Grid.Remove(item);
-                            inventory.Grid.Add(item);
+                            inventory.RefreshItems();
                         }
                     }
                 }
@@ -760,7 +762,8 @@ namespace Burntime.Remaster.Scenes
             else if (item.IsSelectable)
             {
                 inventory.ActiveCharacter.SelectItem(item);
-                inventory.RefreshItemMarkers();
+                // the active weapon moves into the weapon slot
+                inventory.RefreshItems();
             }
             else if (item.Type.Production != null)
             {
@@ -779,7 +782,7 @@ namespace Burntime.Remaster.Scenes
         {
             BurntimeClassic classic = app as BurntimeClassic;
 
-            if (inventory.ActiveCharacter.Items.Count == 6)
+            if (!inventory.ActiveCharacter.CanTake((Item)state))
                 return;
 
             if (classic.InventoryRoom != null)
@@ -791,7 +794,6 @@ namespace Burntime.Remaster.Scenes
                 if (item.Type.Production != null)
                     classic.Game.World.ActiveLocationObj.RefreshFoodProductionSelection();
 
-                inventory.Grid.Add(item);
                 grid.Remove(item);
             }
             else if (classic.PickItems != null)
@@ -800,11 +802,10 @@ namespace Burntime.Remaster.Scenes
 
                 classic.PickItems.Remove(state as Item);
 
-                inventory.Grid.Add(state as Item);
                 grid.Remove(state as Item);
             }
 
-            inventory.RefreshCombatLoadout();
+            inventory.RefreshItems();
 
             EnsureNonEmptyArea();
         }

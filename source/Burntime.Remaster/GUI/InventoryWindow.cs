@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Burntime.Remaster.Logic;
+using Burntime.Remaster.Logic.Rules;
 using Burntime.Framework;
 using Burntime.Framework.GUI;
 using Burntime.Platform;
@@ -59,6 +61,19 @@ namespace Burntime.Remaster.GUI
             get { return grid; }
             set { grid = value; }
         }
+
+        // Extended rules: weapon slot below the portrait and two pages of bag slots (left side only).
+        static readonly Vector2 WeaponSlotFrame = new(35, 45);
+        readonly ItemGridWindow? weaponGrid;
+        readonly GuiImage? weaponSlotFrame;
+        readonly Button[] bagPageButtons = new Button[2];
+        int bagPage;
+        int bagPageCount = 1;
+
+        /// <summary>Weapon slot of the active character; null on the trader side.</summary>
+        public ItemGridWindow? WeaponGrid => weaponGrid;
+
+        bool ShowsWeaponSlot => !side && activePage != null && activePage.Character.HasWeaponSlot;
 
         public Character ActiveCharacter
         {
@@ -174,6 +189,37 @@ namespace Burntime.Remaster.GUI
             grid.LeftClickItemEvent += OnLeftClickItem;
             grid.RightClickItemEvent += OnRightClickItem;
 
+            if (!side)
+            {
+                weaponSlotFrame = "gfx/ui/weapon_slot.png";
+                Windows += weaponGrid = new ItemGridWindow(App)
+                {
+                    UnifiedSelection = true,
+                    LockPositions = true,
+                    Position = basePos + WeaponSlotFrame + new Vector2(2, 2),
+                    Spacing = Vector2.Zero,
+                    Grid = new Vector2(1, 1),
+                    Layer = Layer + Logic.Group.MAX_PEOPLE + 1
+                };
+                weaponGrid.LeftClickItemEvent += OnLeftClickItem;
+                weaponGrid.RightClickItemEvent += OnRightClickItem;
+                weaponGrid.Hide();
+
+                string[] arrows = ["gfx/up.png", "gfx/down.png"];
+                for (int i = 0; i < bagPageButtons.Length; i++)
+                {
+                    bagPageButtons[i] = new Button(App)
+                    {
+                        Image = arrows[i],
+                        Position = basePos + new Vector2(125, i == 0 ? 85 : 134),
+                        Layer = Layer + Logic.Group.MAX_PEOPLE + 2
+                    };
+                    bagPageButtons[i].Command += new CommandHandler(OnBagPage, i);
+                    bagPageButtons[i].Hide();
+                    Windows += bagPageButtons[i];
+                }
+            }
+
             pages = new List<InventoryPage>();
             activePageIndex = 0;
             activePage = null;
@@ -252,15 +298,58 @@ namespace Burntime.Remaster.GUI
         public void OnSelectPage()
         {
             grid.Clear();
+            weaponGrid?.Clear();
 
             if (activePage != null)
             {
                 RefreshCombatLoadout();
-                for (int i = activePage.Offset; i < activePage.Character.Items.Count && grid.Count < 6; i++)
-                    grid.Add(activePage.Character.Items[i]);
+                Character character = activePage.Character;
+                bool slot = ShowsWeaponSlot;
+                Item? slotItem = slot ? character.SlotWeapon : null;
+                var bag = character.Items.Where(item => item != slotItem).ToList();
 
-                face.FaceID = activePage.Character.FaceID;
+                bagPageCount = slot ? System.Math.Max(1, (character.BagCapacity + InventoryRules.PageSize - 1) / InventoryRules.PageSize) : 1;
+                bagPage = System.Math.Clamp(bagPage, 0, bagPageCount - 1);
+                for (int i = activePage.Offset + bagPage * InventoryRules.PageSize; i < bag.Count && grid.Count < InventoryRules.PageSize; i++)
+                    grid.Add(bag[i]);
+
+                if (weaponGrid != null)
+                {
+                    if (slotItem != null)
+                        weaponGrid.Add(slotItem);
+                    weaponGrid.IsVisible = slot;
+                }
+                for (int i = 0; i < bagPageButtons.Length; i++)
+                    bagPageButtons[i]?.Hide();
+                if (bagPageCount > 1)
+                {
+                    // show the arrow that leads to the other page
+                    bagPageButtons[bagPage == 0 ? 1 : 0].Show();
+                }
+
+                face.FaceID = character.FaceID;
+                RefreshItemMarkers();
             }
+        }
+
+        /// <summary>Rebuilds the displayed items after the active character's inventory changed.</summary>
+        public void RefreshItems() => OnSelectPage();
+
+        void OnBagPage(int index)
+        {
+            int target = index == 0 ? bagPage - 1 : bagPage + 1;
+            if (target < 0 || target >= bagPageCount)
+                return;
+            bagPage = target;
+            OnSelectPage();
+        }
+
+        public override bool OnMouseWheel(Vector2 position, int delta)
+        {
+            if (bagPageCount <= 1)
+                return false;
+            OnBagPage(delta > 0 ? 0 : 1);
+            return true;
         }
 
         public void RefreshCombatLoadout()
@@ -276,12 +365,16 @@ namespace Burntime.Remaster.GUI
         public void RefreshItemMarkers()
         {
             grid.Selection.Clear();
+            weaponGrid?.Selection.Clear();
             if (activePage == null)
                 return;
 
             foreach (Item item in activePage.Character.Items)
                 if (activePage.Character.IsItemInUse(item))
+                {
                     grid.Selection.Add(item);
+                    weaponGrid?.Selection.Add(item);
+                }
         }
 
         public override void OnRender(RenderTarget Target)
@@ -291,6 +384,12 @@ namespace Burntime.Remaster.GUI
             for (int i = pages.Count - 1; i >= 0; i--)
             {
                 Target.DrawSprite(basePos + inventoryOffset * i, back);
+                Target.Layer++;
+            }
+
+            if (ShowsWeaponSlot && weaponSlotFrame != null)
+            {
+                Target.DrawSprite(basePos + WeaponSlotFrame, weaponSlotFrame);
                 Target.Layer++;
             }
 
@@ -335,32 +434,45 @@ namespace Burntime.Remaster.GUI
                 textPos.y += fontSpacing;
 
                 GuiFont statsFont = app.IsNewGfx ? smallFont : font;
-                textPos.x = basePos.x + 73;
-                if (combat.Defense > 0)
-                    statsFont.DrawText(Target, textPos, app.IsNewGfx
-                        ? txt.Get("newburn?112") : $"Def: {combat.Defense}%", TextAlignment.Left, VerticalTextAlignment.Top);
-                textPos.x = basePos.x + 20;
-                statsFont.DrawText(Target, textPos, app.IsNewGfx || !(combat.Defense > 0)
-                    ? txt.Get("newburn?111") : $"Dmg: {damage}",
-                    TextAlignment.Left, VerticalTextAlignment.Top);
-                textPos.y += fontSpacing;
-
+                string hazards = "";
+                foreach (string hazard in new[] { "gas", "radiation" })
                 {
-                    string text = "";
-                    foreach (string hazard in new[] { "gas", "radiation" })
-                    {
-                        float rate = activePage.Character.GetHazardProtectionRate(hazard);
-                        if (rate <= 0)
-                            continue;
-                        int label = hazard == "gas" ? 90 : app.IsNewGfx ? 92 : 91;
-                        if (text.Length > 0)
-                            text += "  ";
-                        text += app.ResourceManager.GetString($"newburn?{label}") +
-                            $": {(int)System.Math.Round(rate * 100)}%";
-                    }
-                    statsFont.DrawText(Target, textPos, text, TextAlignment.Left, VerticalTextAlignment.Top);
+                    float rate = activePage.Character.GetHazardProtectionRate(hazard);
+                    if (rate <= 0)
+                        continue;
+                    int label = hazard == "gas" ? 90 : app.IsNewGfx ? 92 : 91;
+                    if (hazards.Length > 0)
+                        hazards += "  ";
+                    hazards += app.ResourceManager.GetString($"newburn?{label}") +
+                        $": {(int)System.Math.Round(rate * 100)}%";
                 }
-                textPos.y += fontSpacing;
+                string defense = app.IsNewGfx ? txt.Get("newburn?112") : $"Def: {combat.Defense}%";
+
+                if (ShowsWeaponSlot)
+                {
+                    // right of the weapon slot: damage, then defense and hazard protection
+                    textPos.x = basePos.x + 74;
+                    statsFont.DrawText(Target, textPos, app.IsNewGfx ? txt.Get("newburn?111") : $"Dmg: {damage}",
+                        TextAlignment.Left, VerticalTextAlignment.Top);
+                    textPos.y += fontSpacing;
+                    string protection = string.Join("  ", new[] { combat.Defense > 0 ? defense : "", hazards }
+                        .Where(text => text.Length > 0));
+                    statsFont.DrawText(Target, textPos, protection, TextAlignment.Left, VerticalTextAlignment.Top);
+                    textPos.y += fontSpacing;
+                }
+                else
+                {
+                    textPos.x = basePos.x + 73;
+                    if (combat.Defense > 0)
+                        statsFont.DrawText(Target, textPos, defense, TextAlignment.Left, VerticalTextAlignment.Top);
+                    textPos.x = basePos.x + 20;
+                    statsFont.DrawText(Target, textPos, app.IsNewGfx || !(combat.Defense > 0)
+                        ? txt.Get("newburn?111") : $"Dmg: {damage}",
+                        TextAlignment.Left, VerticalTextAlignment.Top);
+                    textPos.y += fontSpacing;
+                    statsFont.DrawText(Target, textPos, hazards, TextAlignment.Left, VerticalTextAlignment.Top);
+                    textPos.y += fontSpacing;
+                }
             }
 
             pageName = "";
@@ -409,6 +521,7 @@ namespace Burntime.Remaster.GUI
 
                 activePageIndex = pageIndices[0];
                 activePage = pages[activePageIndex];
+                bagPage = 0;
 
                 OnSelectPage();
             }

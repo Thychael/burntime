@@ -661,10 +661,10 @@ class TraderScene : Scene
 
     void OnClickTemporarySpace(Framework.States.StateObject state)
     {
-        if (inventory.Grid.MaxCount - inventory.Grid.Count <= 0)
+        Item item = state as Item;
+        if (!inventory.ActiveCharacter.CanTake(item))
             return;
 
-        Item item = state as Item;
         inventory.ActiveCharacter.Items.Add(item);
         inventory.OnSelectPage();
         temporarySpace.Remove(item);
