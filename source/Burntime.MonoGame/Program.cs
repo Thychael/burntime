@@ -32,6 +32,12 @@ if (Burntime.MonoGame.UiSoakRunner.IsRequested(args))
     AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CustomExceptionHandler.OnThreadException);
 #endif
 
+if (Burntime.MonoGame.WorldGenerationCommand.IsRequested(args))
+{
+    Environment.ExitCode = Burntime.MonoGame.WorldGenerationCommand.Run(args);
+    return;
+}
+
 if (Burntime.MonoGame.HeadlessSimulationCommand.IsRequested(args) ||
     Burntime.MonoGame.SavegameCompatibilityCommand.IsRequested(args))
 {
