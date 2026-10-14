@@ -19,6 +19,8 @@ public interface IEngine
 {
     DeviceManager DeviceManager { get; set; }
     float Layer { get; set; }
+    /// <summary>Scale applied to sprites and rectangles rendered from now on (1 = original size).</summary>
+    float SpriteScale { get; set; }
     float MaxLayers { get; }
 
     BlendOverlayBase BlendOverlay { get; }

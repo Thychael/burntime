@@ -62,6 +62,19 @@ class MapViewOverlayHoverText : IMapViewOverlay
     const float AnnouncementFadeDuration = 0.35f;
 
     public bool IsVisible { get; set; } = true;
+    public bool ZoomSprites => false;
+    public float Zoom { get; set; } = 1;
+
+    const int TopMargin = 8;
+
+    /// <summary>Screen anchor of a text at a map position; only the anchor follows the map zoom.</summary>
+    Vector2 Anchor(Vector2 position, Vector2 offset)
+    {
+        if (Zoom == 1)
+            return position + offset;
+        Vector2 margin = new(0, TopMargin);
+        return (Vector2)((Vector2f)(position + offset + margin) * Zoom) - margin;
+    }
     public bool ShowAllEntrances { get; set; }
 
     public MapViewOverlayHoverText(Module App)
@@ -129,7 +142,7 @@ class MapViewOverlayHoverText : IMapViewOverlay
 
     public void RenderOverlay(RenderTarget Target, Vector2 Offset, Vector2 Size)
     {
-        const int topMargin = 8;
+        const int topMargin = TopMargin;
 
         var textTarget = Target.GetSubBuffer(new Rect(0, topMargin, Target.Width, Target.Height - topMargin));
 
@@ -284,7 +297,7 @@ class MapViewOverlayHoverText : IMapViewOverlay
             bars.Add(new GuiTextBar(GuiTextBarType.RedBar,
                 GetLevel(character!.Health, 7)));
 
-        textBars.Draw(target, info.Position + offset, info.Title, info.Color, alpha, bars);
+        textBars.Draw(target, Anchor(info.Position, offset), info.Title, info.Color, alpha, bars);
     }
 
     static int GetLevel(int value, int levels)
@@ -334,7 +347,7 @@ class MapViewOverlayHoverText : IMapViewOverlay
             }
             else if (showResourceInfo)
                 radioBars.Add(new GuiTextBar(GuiTextBarType.BlueBar, baseWater));
-            textBars.Draw(target, info.Position + offset, info.Title, locationColor, alpha,
+            textBars.Draw(target, Anchor(info.Position, offset), info.Title, locationColor, alpha,
                 radioBars, dangerIcon,
                 ownershipFlag, showBackground: true);
             return;
@@ -350,7 +363,7 @@ class MapViewOverlayHoverText : IMapViewOverlay
             bars.Add(new GuiTextBar(GuiTextBarType.RedBar, foodPerDay));
         AddTrapIcons(bars, info.WorldLocation);
         bars.Add(new GuiTextBar(GuiTextBarType.BlueBar, info.WorldLocation.Source.Water));
-        textBars.Draw(target, info.Position + offset, info.Title, locationColor, alpha, bars,
+        textBars.Draw(target, Anchor(info.Position, offset), info.Title, locationColor, alpha, bars,
             dangerIcon, ownershipFlag, showBackground: true);
     }
 
@@ -359,7 +372,7 @@ class MapViewOverlayHoverText : IMapViewOverlay
     {
         if (!showInventoryHint || info.Room == null)
         {
-            textBars.Draw(target, info.Position + offset, info.Title, info.Color, alpha,
+            textBars.Draw(target, Anchor(info.Position, offset), info.Title, info.Color, alpha,
                 System.Array.Empty<GuiTextBar>());
             return;
         }
@@ -376,7 +389,7 @@ class MapViewOverlayHoverText : IMapViewOverlay
         AddTrapIcons(bars, mapState, info.Room);
         if (info.Room.IsWaterSource)
             bars.Add(new GuiTextBar(GuiTextBarType.BlueBar, mapState.Source.Reserve));
-        textBars.Draw(target, info.Position + offset, info.Title, info.Color, alpha, bars);
+        textBars.Draw(target, Anchor(info.Position, offset), info.Title, info.Color, alpha, bars);
     }
 
     static void AddTrapIcons(List<GuiTextBar> bars, Location location, Room? room = null)

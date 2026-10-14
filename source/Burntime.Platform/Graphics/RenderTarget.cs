@@ -3,6 +3,23 @@
 public class RenderTarget
 {
     public Vector2 Offset { get; set; }
+
+    /// <summary>
+    /// Zoom around the target origin: positions (including <see cref="Offset"/>), sprites and
+    /// rectangles are multiplied by it.
+    /// </summary>
+    public float Zoom { get; set; } = 1;
+
+    bool IsZoomed => Zoom != 1;
+
+    Vector2f Place(Vector2f pos) => (Vector2f)_rc.Position + (pos + Offset) * Zoom;
+
+    float BeginScale()
+    {
+        float previous = _engine.SpriteScale;
+        _engine.SpriteScale = previous * Zoom;
+        return previous;
+    }
     public float Layer
     {
         get => _engine.Layer;
@@ -39,7 +56,10 @@ public class RenderTarget
         if (sprite == null)
             return;
 
-        _engine.RenderSprite(sprite, pos + _rc.Position + Offset);
+        if (IsZoomed)
+            DrawSpriteF(pos, sprite, 1);
+        else
+            _engine.RenderSprite(sprite, pos + _rc.Position + Offset);
     }
 
     public void DrawSprite(Vector2 pos, ISprite sprite, float alpha,
@@ -48,8 +68,11 @@ public class RenderTarget
         if (sprite == null)
             return;
 
-        _engine.RenderSprite(sprite, pos + _rc.Position + Offset, alpha, postFilter,
-            directToFramebuffer);
+        if (IsZoomed)
+            DrawSpriteF(pos, sprite, alpha, postFilter, directToFramebuffer);
+        else
+            _engine.RenderSprite(sprite, pos + _rc.Position + Offset, alpha, postFilter,
+                directToFramebuffer);
     }
 
     public void DrawSpriteF(Vector2f pos, ISprite sprite, float alpha,
@@ -58,8 +81,16 @@ public class RenderTarget
         if (sprite == null)
             return;
 
-        _engine.RenderSpriteF(sprite, pos + _rc.Position + Offset, alpha, postFilter,
-            directToFramebuffer);
+        if (!IsZoomed)
+        {
+            _engine.RenderSpriteF(sprite, pos + _rc.Position + Offset, alpha, postFilter,
+                directToFramebuffer);
+            return;
+        }
+
+        float previous = BeginScale();
+        _engine.RenderSpriteF(sprite, Place(pos), alpha, postFilter, directToFramebuffer);
+        _engine.SpriteScale = previous;
     }
 
     public void DrawSprite(Vector2 pos, ISprite sprite, Rect srcRect)
@@ -67,7 +98,7 @@ public class RenderTarget
         if (sprite == null)
             return;
 
-        _engine.RenderSprite(sprite, pos + _rc.Position + Offset);
+        DrawSprite(pos, sprite);
     }
 
     ISprite? _selectedSprite;
@@ -80,6 +111,12 @@ public class RenderTarget
     {
         if (_selectedSprite is null) return;
 
+        if (IsZoomed)
+        {
+            DrawSelectedSpriteF(pos, srcRect, color);
+            return;
+        }
+
         _engine.RenderSprite(_selectedSprite, pos + _rc.Position + Offset, srcRect.Position, srcRect.Width, srcRect.Height, color);
     }
 
@@ -88,20 +125,41 @@ public class RenderTarget
     {
         if (_selectedSprite is null) return;
 
-        _engine.RenderSpriteF(_selectedSprite, pos + _rc.Position + Offset,
+        if (!IsZoomed)
+        {
+            _engine.RenderSpriteF(_selectedSprite, pos + _rc.Position + Offset,
+                srcRect.Position, srcRect.Width, srcRect.Height, color, postFilter,
+                directToFramebuffer);
+            return;
+        }
+
+        float previous = BeginScale();
+        _engine.RenderSpriteF(_selectedSprite, Place(pos),
             srcRect.Position, srcRect.Width, srcRect.Height, color, postFilter,
             directToFramebuffer);
+        _engine.SpriteScale = previous;
     }
     #endregion
 
     public void RenderRect(Vector2 pos, Vector2 size, PixelColor color, bool postFilter = false)
     {
-        _engine.RenderRect(pos + _rc.Position + Offset, size, color, postFilter);
+        if (!IsZoomed)
+        {
+            _engine.RenderRect(pos + _rc.Position + Offset, size, color, postFilter);
+            return;
+        }
+
+        float previous = BeginScale();
+        _engine.RenderRect(new Vector2(Place(pos)), size, color, postFilter);
+        _engine.SpriteScale = previous;
     }
 
     public void RenderLine(Vector2 start, Vector2 end, PixelColor color)
     {
-        _engine.RenderLine(start + _rc.Position + Offset, end + _rc.Position + Offset, color);
+        if (IsZoomed)
+            _engine.RenderLine(new Vector2(Place(start)), new Vector2(Place(end)), color);
+        else
+            _engine.RenderLine(start + _rc.Position + Offset, end + _rc.Position + Offset, color);
     }
 
     public RenderTarget GetSubBuffer(Rect rc)
@@ -110,7 +168,8 @@ public class RenderTarget
         {
             Elapsed = Elapsed,
             TotalElapsed = TotalElapsed,
-            Offset = Offset
+            Offset = Offset,
+            Zoom = Zoom
         };
         return target;
     }

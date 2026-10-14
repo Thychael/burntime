@@ -16,6 +16,15 @@ namespace Burntime.Remaster.Maps
 
         bool IsVisible { get; set; }
         IMapObject GetObjectAt(Vector2 position);
+
+        /// <summary>
+        /// False for overlays that draw text: they are rendered unzoomed and place their text at
+        /// zoomed positions themselves (see <see cref="Zoom"/>), so text keeps its size.
+        /// </summary>
+        bool ZoomSprites => true;
+
+        /// <summary>Map zoom for overlays with <see cref="ZoomSprites"/> false.</summary>
+        float Zoom { get => 1; set { } }
     }
 
     public interface IMapViewEntranceOverlay

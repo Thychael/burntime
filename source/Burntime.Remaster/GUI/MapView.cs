@@ -127,6 +127,56 @@ public class MapView : Window
 
     float scrollSpeed = 70;
 
+    #region Zoom
+    static readonly float[] ZoomLevels = [0.5f, 1f, 2f];
+    float _zoom = 1;
+
+    /// <summary>Enables mouse wheel zoom (world map only).</summary>
+    public bool AllowZoom { get; set; }
+
+    /// <summary>Screen pixels per map pixel. Scroll positions stay in map pixels.</summary>
+    public float Zoom
+    {
+        get => _zoom;
+        set
+        {
+            _zoom = System.Math.Clamp(value, ZoomLevels[0], ZoomLevels[^1]);
+            if (ConstrainPosition())
+                Scroll?.Invoke(this, new MapScrollArgs(_position));
+        }
+    }
+
+    /// <summary>Part of the map that fits into the view, in map pixels.</summary>
+    Vector2f ViewSize => (Vector2f)Size / _zoom;
+
+    /// <summary>View-relative screen position to view-relative map position (before scrolling).</summary>
+    Vector2 Unzoom(Vector2 position) => (Vector2)((Vector2f)position / _zoom);
+
+    public override bool OnMouseWheel(Vector2 position, int delta)
+    {
+        if (!AllowZoom || !Enabled || map is null || delta == 0)
+            return false;
+
+        int level = System.Array.IndexOf(ZoomLevels, _zoom);
+        if (level < 0)
+            level = System.Array.IndexOf(ZoomLevels, 1f);
+        int next = System.Math.Clamp(level + (delta > 0 ? 1 : -1), 0, ZoomLevels.Length - 1);
+        if (next == level)
+            return true;
+
+        // keep the map point under the cursor in place
+        Vector2f anchor = (Vector2f)position / _zoom - _position;
+        _zoom = ZoomLevels[next];
+        _position = (Vector2f)position / _zoom - anchor;
+        _touchPanVelocity = Vector2f.Zero;
+        ConstrainPosition();
+        Scroll?.Invoke(this, new MapScrollArgs(_position));
+        entrance = HitTestEntrance(position);
+        mousePosition = Unzoom(position) - ScrollPosition;
+        return true;
+    }
+    #endregion
+
     Vector2f border = new Vector2f();
     bool mouseEdgeScrollArmed = true;
     int entrance = -1;
@@ -157,12 +207,14 @@ public class MapView : Window
         if (map is null) return;
 
         Vector2 offset = ScrollPosition;
+        Target.Zoom = _zoom;
+        Vector2 viewSize = (Vector2)ViewSize;
 
         // pre-fetch all tiles for smooth scrolling
         foreach (var tile in Map.Tiles)
             tile.Image.Touch();
 
-        Rect visible = new Rect(-offset / map.TileSize, Size / map.TileSize + 2);
+        Rect visible = new Rect(-offset / map.TileSize, viewSize / map.TileSize + 2);
         visible = visible.Intersect(new Rect(0, 0, map.Width, map.Height));
 
         foreach (Vector2 pos in visible)
@@ -220,7 +272,11 @@ public class MapView : Window
             if (!overlay.IsVisible)
                 continue;
             Target.Layer++;
-            overlay.RenderOverlay(Target, offset, Size);
+            // Text overlays are rendered unzoomed and only zoom their anchor positions.
+            overlay.Zoom = _zoom;
+            Target.Zoom = overlay.ZoomSprites ? _zoom : 1;
+            overlay.RenderOverlay(Target, offset, viewSize);
+            Target.Zoom = _zoom;
         }
 
         Target.Layer++;
@@ -262,11 +318,11 @@ public class MapView : Window
 
         entrance = HitTestEntrance(position);
 
-        mousePosition = position - ScrollPosition;
+        mousePosition = Unzoom(position) - ScrollPosition;
 
         if (_rightClickMove.HasValue)
         {
-            _position += (Vector2f)(position - _rightClickMove.Value);
+            _position += (Vector2f)(position - _rightClickMove.Value) / _zoom;
             ConstrainPosition();
 
             _moveTotal += (position - _rightClickMove.Value).Length;
@@ -331,7 +387,7 @@ public class MapView : Window
         {
             if (!overlay.IsVisible)
                 continue;
-            IMapObject obj = overlay.GetObjectAt(position - ScrollPosition);
+            IMapObject obj = overlay.GetObjectAt(Unzoom(position) - ScrollPosition);
             if (obj != null)
                 mostTopObj = obj;
         }
@@ -345,7 +401,7 @@ public class MapView : Window
 
         if (mouseClickEvent != null && button == MouseButton.Left)
         {
-            mouseClickEvent.Execute(position - ScrollPosition, button);
+            mouseClickEvent.Execute(Unzoom(position) - ScrollPosition, button);
             return true;
         }
 
@@ -364,8 +420,8 @@ public class MapView : Window
 
             if (overlay is Maps.IMapViewEntranceOverlay entranceOverlay)
             {
-                int entrance = entranceOverlay.HitTestEntrance(position,
-                    ScrollPosition, Size);
+                int entrance = entranceOverlay.HitTestEntrance(Unzoom(position),
+                    ScrollPosition, (Vector2)ViewSize);
                 if (entrance >= 0 && HasLocation(entrance))
                     return entrance;
             }
@@ -374,7 +430,7 @@ public class MapView : Window
         if (map != null)
         {
             for (int i = map.Entrances.Length - 1; i >= 0; i--)
-                if (map.Entrances[i].Area.PointInside(position - ScrollPosition) && HasLocation(i))
+                if (map.Entrances[i].Area.PointInside(Unzoom(position) - ScrollPosition) && HasLocation(i))
                     return i;
         }
 
@@ -410,7 +466,7 @@ public class MapView : Window
         if (!Enabled) return;
         _suppressTouchAction = false;
         _touchPanVelocity = Vector2f.Zero;
-        _position += (Vector2f)delta;
+        _position += (Vector2f)delta / _zoom;
         ConstrainPosition();
         Scroll?.Invoke(this, new MapScrollArgs(_position));
     }
@@ -495,7 +551,7 @@ public class MapView : Window
         if (mouseInputVisible && !cameraPanInputDown &&
             !_rightClickMove.HasValue && border != Vector2f.Zero)
         {
-            _position += border * Elapsed * scrollSpeed;
+            _position += border * Elapsed * scrollSpeed / _zoom;
             positionChanged = true;
         }
 
@@ -557,7 +613,7 @@ public class MapView : Window
     public void CenterTo(Vector2 centerTo)
     {
         _touchPanVelocity = Vector2f.Zero;
-        _position = -centerTo + (Boundings.Size / 2);
+        _position = -(Vector2f)centerTo + ViewSize / 2;
         ConstrainPosition();
         Scroll?.Invoke(this, new MapScrollArgs(_position));
     }
@@ -577,8 +633,8 @@ public class MapView : Window
 
         Vector2f oldPosition = _position;
         Vector2f screenPosition = (Vector2f)mapPosition + _position;
-        Vector2f minimum = (Vector2f)Boundings.Size / 3;
-        Vector2f maximum = (Vector2f)Boundings.Size * (2f / 3f);
+        Vector2f minimum = ViewSize / 3;
+        Vector2f maximum = ViewSize * (2f / 3f);
         Vector2f desiredPosition = _position;
 
         if (screenPosition.x < minimum.x)
@@ -617,7 +673,7 @@ public class MapView : Window
             return;
 
         _touchPanVelocity = Vector2f.Zero;
-        _position -= (Vector2f)direction * elapsed * scrollSpeed;
+        _position -= (Vector2f)direction * elapsed * scrollSpeed / _zoom;
         ConstrainPosition();
         Scroll?.Invoke(this, new MapScrollArgs(_position));
     }
@@ -635,15 +691,16 @@ public class MapView : Window
     void ConstrainPosition(ref Vector2f position)
     {
         Vector2 mapSize = map.TileSize * map.Size;
+        Vector2f view = ViewSize;
 
-        if (mapSize.x <= Boundings.Size.x)
-            position.x = (Boundings.Size.x - mapSize.x) / 2;
+        if (mapSize.x <= view.x)
+            position.x = (view.x - mapSize.x) / 2;
         else
-            position.x = System.Math.Clamp(position.x, Boundings.Size.x - mapSize.x, 0);
+            position.x = System.Math.Clamp(position.x, view.x - mapSize.x, 0);
 
-        if (mapSize.y <= Boundings.Size.y)
-            position.y = (Boundings.Size.y - mapSize.y) / 2;
+        if (mapSize.y <= view.y)
+            position.y = (view.y - mapSize.y) / 2;
         else
-            position.y = System.Math.Clamp(position.y, Boundings.Size.y - mapSize.y, 0);
+            position.y = System.Math.Clamp(position.y, view.y - mapSize.y, 0);
     }
 }

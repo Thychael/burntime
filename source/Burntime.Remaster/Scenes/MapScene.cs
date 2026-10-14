@@ -71,7 +71,7 @@ namespace Burntime.Remaster
             gui = classic.NewGui ? new MainUiLeftWindow(App) : new MainUiOriginalWindow(App);
             gui.OpenInventory = OnMenuInventory;
 
-            view = new ClassicMapView(this, App);
+            view = new ClassicMapView(this, App) { AllowZoom = true };
             gui.SetMapRenderArea(view, Size);
 
             view.Overlays.Add(new Maps.MapViewOverlayFlags(app));
