@@ -327,7 +327,7 @@ namespace Burntime.Remaster.Scenes
         {
             Item? focusedItem = source.FocusedItem;
             return focusedItem != null && grid != null &&
-                (source == inventory.Grid || source == inventory.WeaponGrid
+                (source == inventory.Grid
                     ? grid.Count < grid.MaxCount
                     : inventory.ActiveCharacter.CanTake(focusedItem));
         }
@@ -444,9 +444,6 @@ namespace Burntime.Remaster.Scenes
             itemTooltip.ClearGrids();
             itemTooltip.AddGrid(inventory.Grid, ItemTooltipSide.Right,
                 item => GetItemTooltipDetails(item, true, inventory.Grid));
-            if (inventory.WeaponGrid != null)
-                itemTooltip.AddGrid(inventory.WeaponGrid, ItemTooltipSide.Right,
-                    item => GetItemTooltipDetails(item, true, inventory.WeaponGrid));
 
             if (classic.InventoryRoom != null)
             {

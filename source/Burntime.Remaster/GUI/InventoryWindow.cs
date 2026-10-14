@@ -62,16 +62,14 @@ namespace Burntime.Remaster.GUI
             set { grid = value; }
         }
 
-        // Extended rules: weapon slot below the portrait and two pages of bag slots (left side only).
-        static readonly Vector2 WeaponSlotFrame = new(35, 45);
-        readonly ItemGridWindow? weaponGrid;
-        readonly GuiImage? weaponSlotFrame;
+        // Extended rules: weapon slot in the gap below the portrait, above the first item column,
+        // and two pages of bag slots (left side only).
+        static readonly Vector2 WeaponSlotPosition = new(22, 56);
+        const int WeaponTextX = 52;
+        readonly WeaponSlotWindow? weaponSlot;
         readonly Button[] bagPageButtons = new Button[2];
         int bagPage;
         int bagPageCount = 1;
-
-        /// <summary>Weapon slot of the active character; null on the trader side.</summary>
-        public ItemGridWindow? WeaponGrid => weaponGrid;
 
         bool ShowsWeaponSlot => !side && activePage != null && activePage.Character.HasWeaponSlot;
 
@@ -191,19 +189,14 @@ namespace Burntime.Remaster.GUI
 
             if (!side)
             {
-                weaponSlotFrame = "gfx/ui/weapon_slot.png";
-                Windows += weaponGrid = new ItemGridWindow(App)
+                Windows += weaponSlot = new WeaponSlotWindow(App)
                 {
-                    UnifiedSelection = true,
-                    LockPositions = true,
-                    Position = basePos + WeaponSlotFrame + new Vector2(2, 2),
-                    Spacing = Vector2.Zero,
-                    Grid = new Vector2(1, 1),
+                    Position = basePos + WeaponSlotPosition,
                     Layer = Layer + Logic.Group.MAX_PEOPLE + 1
                 };
-                weaponGrid.LeftClickItemEvent += OnLeftClickItem;
-                weaponGrid.RightClickItemEvent += OnRightClickItem;
-                weaponGrid.Hide();
+                weaponSlot.LeftClick += item => OnLeftClickItem(item);
+                weaponSlot.RightClick += item => OnRightClickItem(item);
+                weaponSlot.Hide();
 
                 string[] arrows = ["gfx/ui/inventory_page_up.png", "gfx/ui/inventory_page_down.png"];
                 for (int i = 0; i < bagPageButtons.Length; i++)
@@ -298,7 +291,6 @@ namespace Burntime.Remaster.GUI
         public void OnSelectPage()
         {
             grid.Clear();
-            weaponGrid?.Clear();
 
             if (activePage != null)
             {
@@ -313,11 +305,10 @@ namespace Burntime.Remaster.GUI
                 for (int i = activePage.Offset + bagPage * InventoryRules.PageSize; i < bag.Count && grid.Count < InventoryRules.PageSize; i++)
                     grid.Add(bag[i]);
 
-                if (weaponGrid != null)
+                if (weaponSlot != null)
                 {
-                    if (slotItem != null)
-                        weaponGrid.Add(slotItem);
-                    weaponGrid.IsVisible = slot;
+                    weaponSlot.Item = slotItem;
+                    weaponSlot.IsVisible = slot;
                 }
                 for (int i = 0; i < bagPageButtons.Length; i++)
                     bagPageButtons[i]?.Hide();
@@ -365,16 +356,12 @@ namespace Burntime.Remaster.GUI
         public void RefreshItemMarkers()
         {
             grid.Selection.Clear();
-            weaponGrid?.Selection.Clear();
             if (activePage == null)
                 return;
 
             foreach (Item item in activePage.Character.Items)
                 if (activePage.Character.IsItemInUse(item))
-                {
                     grid.Selection.Add(item);
-                    weaponGrid?.Selection.Add(item);
-                }
         }
 
         public override void OnRender(RenderTarget Target)
@@ -387,11 +374,6 @@ namespace Burntime.Remaster.GUI
                 Target.Layer++;
             }
 
-            if (ShowsWeaponSlot && weaponSlotFrame != null)
-            {
-                Target.DrawSprite(basePos + WeaponSlotFrame, weaponSlotFrame);
-                Target.Layer++;
-            }
 
             TextHelper txt = new TextHelper(app, "burn");
 
@@ -451,7 +433,7 @@ namespace Burntime.Remaster.GUI
                 if (ShowsWeaponSlot)
                 {
                     // right of the weapon slot: damage, then defense and hazard protection
-                    textPos.x = basePos.x + 74;
+                    textPos.x = basePos.x + WeaponTextX;
                     statsFont.DrawText(Target, textPos, app.IsNewGfx ? txt.Get("newburn?111") : $"Dmg: {damage}",
                         TextAlignment.Left, VerticalTextAlignment.Top);
                     textPos.y += fontSpacing;
