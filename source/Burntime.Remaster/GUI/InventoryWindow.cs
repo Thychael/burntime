@@ -205,7 +205,7 @@ namespace Burntime.Remaster.GUI
                 weaponGrid.RightClickItemEvent += OnRightClickItem;
                 weaponGrid.Hide();
 
-                string[] arrows = ["gfx/up.png", "gfx/down.png"];
+                string[] arrows = ["gfx/ui/inventory_page_up.png", "gfx/ui/inventory_page_down.png"];
                 for (int i = 0; i < bagPageButtons.Length; i++)
                 {
                     bagPageButtons[i] = new Button(App)
