@@ -11,6 +11,8 @@ namespace Burntime.Remaster.GUI
 {
     public class ClassicMapView : MapView
     {
+        static readonly PixelColor WayColor = new(208, 0, 0);
+
         public ClassicMapView(IMapEntranceHandler Handler, Module App)
             : base(Handler, App)
         {
@@ -83,6 +85,12 @@ namespace Burntime.Remaster.GUI
                         Target.DrawSprite(pos, sprite);
                         pos.x += 32;
                     }
+                }
+                else if (Ways.Ways[way].Points is { Length: > 1 } points)
+                {
+                    // generated ways have no image: draw them in the color of the original way images
+                    for (int i = 1; i < points.Length; i++)
+                        Target.RenderLine(points[i - 1] + offset, points[i] + offset, WayColor);
                 }
             }
 

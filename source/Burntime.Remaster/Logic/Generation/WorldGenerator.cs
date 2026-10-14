@@ -241,7 +241,7 @@ public static class WorldGenerator
     static double Distance((double X, double Y) a, (double X, double Y) b) =>
         Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
 
-    sealed class NameGenerator(WorldRandom random)
+    internal sealed class NameGenerator(WorldRandom random)
     {
         static readonly string[] First =
         [

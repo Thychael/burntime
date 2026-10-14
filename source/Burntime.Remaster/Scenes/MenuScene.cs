@@ -1091,6 +1091,8 @@ public class MenuScene : Scene
             },
             AiOpponents = SelectedAiOpponents
         };
+        // Extended games add random sites to the original world; Classic stays faithful.
+        Info.RandomSites = Info.Rules == RuleSet.Extended ? RandomSites.DefaultCount : 0;
 
         BurntimeClassic.Instance.RememberNewGamePreferences(
             Info.Difficulty + 1, Info.Rules, Info.AI, SelectedAiOpponents);

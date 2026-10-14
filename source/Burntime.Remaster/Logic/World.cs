@@ -44,6 +44,10 @@ namespace Burntime.Remaster.Logic
                 .SelectMany(room => room.Items))
             .Distinct();
         public int ActivePlayer;
+
+        /// <summary>Random extra locations of this game; empty in older saves.</summary>
+        [System.Runtime.Serialization.OptionalField]
+        public Generation.RandomSiteState RandomSites;
         public float Time;
         public int Day;
 

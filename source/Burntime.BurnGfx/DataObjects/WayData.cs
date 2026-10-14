@@ -14,6 +14,8 @@ namespace Burntime.Data.BurnGfx
         public int Start;
         public int End;
         public Vector2 Position;
+        /// <summary>Drawn as connected lines when there are no <see cref="Images"/>.</summary>
+        public Vector2[] Points;
     }
 
     public struct CrossWay

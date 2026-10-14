@@ -241,6 +241,9 @@ public abstract class ResourceManagerBase : IResourceManager
     {
         if (id.StartsWith("@"))
             id = id[1..];
+        // "=text" is a literal text, e.g. the name of a generated location.
+        if (id.StartsWith("="))
+            return id[1..];
 
         int atmark = id.LastIndexOf('?');
         return GetString(id[..atmark], int.Parse(id[(atmark + 1)..]));

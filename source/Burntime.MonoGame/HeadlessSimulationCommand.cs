@@ -51,6 +51,7 @@ internal static class HeadlessSimulationCommand
                 AiDifficulties = parsed.AiDifficulties,
                 AiProfiles = parsed.AiProfiles,
                 AiOpponents = parsed.AiOpponents,
+                RandomSites = parsed.RandomSites,
                 Seed = parsed.Seed,
                 Rules = parsed.Rules,
                 AI = parsed.AI,
@@ -84,7 +85,7 @@ internal static class HeadlessSimulationCommand
                 "[--ai-difficulties easy,normal,hard,hard] [--seed N] [--load-save PATH] " +
                 "[--save-at-end PATH] [--report PATH] [--rules dos|amiga|classic|extended] " +
                 "[--ai none|dos|amiga|modern] " +
-                "[--ai-profiles dos,amiga,modern,none] [--ai-opponents N] [--smoke-test] " +
+                "[--ai-profiles dos,amiga,modern,none] [--ai-opponents N] [--random-sites N] [--smoke-test] " +
                 "[--early-death-turn N] [--economy-report PATH] [--weak-frontier-test]");
             return 2;
         }
@@ -147,6 +148,9 @@ internal static class HeadlessSimulationCommand
                     break;
                 case "--ai-opponents":
                     result.AiOpponents = int.Parse(NextValue(args, ref index, argument), CultureInfo.InvariantCulture);
+                    break;
+                case "--random-sites":
+                    result.RandomSites = int.Parse(NextValue(args, ref index, argument), CultureInfo.InvariantCulture);
                     break;
                 case "--weak-frontier-test":
                     result.WeakFrontierTest = true;
@@ -239,6 +243,7 @@ internal static class HeadlessSimulationCommand
         public int[]? AiDifficulties { get; set; }
         public AiProfile[]? AiProfiles { get; set; }
         public int? AiOpponents { get; set; }
+        public int? RandomSites { get; set; }
         public int Seed { get; set; } = 1;
         public string? ReportPath { get; set; }
         public string? EconomyReportPath { get; set; }

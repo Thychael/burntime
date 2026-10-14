@@ -1,11 +1,9 @@
 burngfx=yes
 burngfx_offset=0x0
-ways=2
+ways=1
 
 [ways]
 way0=8 37
-way1=9 38
 
 [images]
 way0=maps/ways/newvillage_0.png
-way1=maps/ways/dryriver_0.png

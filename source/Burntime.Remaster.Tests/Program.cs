@@ -71,6 +71,7 @@ static class Program
         Run("construction feedback", ConstructionFeedbackTests.AvailabilityCases());
         Run("log file lifetime", LogLifecycleTests.Cases());
         Run("world generation", WorldGeneratorTests.Cases());
+        Run("random sites", RandomSitesTests.Cases());
 
         Console.WriteLine($"Rule formulas: {passed} passed, {failed} failed.");
         return failed == 0 ? 0 : 1;

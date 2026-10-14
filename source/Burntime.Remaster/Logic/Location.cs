@@ -16,8 +16,17 @@ public class Location : StateObject, IUpdateable, ITurnable
     #region Map
 
     [DiagnosticOnly]
-    // BURN.TXT has name slots only up to New Village (37); later locations use newlocations.txt.
-    internal string Title => ResourceManager.GetString(Id <= 37 ? $"burn?{Id}" : $"newlocations?{Id - 37}");
+    // The world map entrance carries the title, also for generated locations.
+    internal string Title
+    {
+        get
+        {
+            var entrances = (container?.Root as ClassicGame)?.World?.Map?.Entrances;
+            return entrances != null && Id >= 0 && Id < entrances.Length && !string.IsNullOrEmpty(entrances[Id].TitleId)
+                ? ResourceManager.GetString(entrances[Id].TitleId)
+                : ResourceManager.GetString($"burn?{Id}");
+        }
+    }
 
     public int Id;
     public static implicit operator int(Location right)

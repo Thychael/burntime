@@ -19,6 +19,7 @@ public sealed class HeadlessSimulationOptions
     public int[]? AiDifficulties { get; init; }
     public AiProfile[]? AiProfiles { get; init; }
     public int? AiOpponents { get; init; }
+    public int? RandomSites { get; init; }
     public int Seed { get; init; } = 1;
     public RuleSet Rules { get; init; } = RuleSet.Dos;
     public AiProfile AI { get; init; } = AiProfile.Modern;
@@ -71,6 +72,7 @@ public static class HeadlessSimulation
                 AiDifficulties = options.AiDifficulties,
                 AiProfiles = options.AiProfiles,
                 AiOpponents = options.AiOpponents,
+                RandomSites = options.RandomSites,
                 ColorOne = BurntimePlayerColor.Green,
                 ColorTwo = BurntimePlayerColor.Red,
                 Rules = options.Rules,

@@ -666,6 +666,7 @@ namespace Burntime.Remaster
 
             view.Ways = (WayData)game.World.Ways.WayData;
             view.Map = (MapData)game.World.Map.MapData;
+            view.Decorations = Logic.Generation.RandomSites.Decorations(view.Map, app.ResourceManager);
             view.Player = game.World.ActivePlayerObj;
             view.ActiveEntrance = game.World.ActivePlayerObj.Location.Id;
             _followKeyboardSelection = false;

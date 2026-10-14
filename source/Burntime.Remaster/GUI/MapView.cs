@@ -116,6 +116,9 @@ public class MapView : Window
     public Location Location { get; set; }
     public Player Player { get; set; }
 
+    /// <summary>Sprites drawn on top of the map tiles at map positions (e.g. random site icons).</summary>
+    public IReadOnlyList<(Vector2 Position, ISprite Sprite)> Decorations { get; set; } = [];
+
     public bool DebugView = false;
 
     Vector2f _position = new Vector2f();
@@ -224,6 +227,9 @@ public class MapView : Window
         }
 
         Target.Layer++;
+
+        foreach (var (position, sprite) in Decorations)
+            Target.DrawSprite(position + offset, sprite);
 
         if (DebugView)
         {

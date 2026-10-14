@@ -24,6 +24,8 @@ namespace Burntime.Remaster.Logic.Generation
         public int[] AiDifficulties;
         /// <summary>Number of active AI opponents; null keeps every AI slot active.</summary>
         public int? AiOpponents;
+        /// <summary>Number of random extra locations on the world map; null or 0 for none.</summary>
+        public int? RandomSites;
     }
 
     enum BurntimePlayerColor
@@ -115,6 +117,9 @@ namespace Burntime.Remaster.Logic.Generation
             game.World.Map = container.Create<Map>(new object[] { definition.MapPath });
             LogicFactory.SetParameter("mainmap", game.World.Map);
             game.World.Ways = container.Create<Ways>(new object[] { definition.WaysPath });
+            // map and way data are shared resources: remove random sites of a previous game
+            IReadOnlyList<RandomSites.SiteIcon> siteIcons = RandomSites.ReadIcons();
+            RandomSites.Apply(game.World.Map.MapData, game.World.Ways.WayData, default, siteIcons);
 
             // set constructions
             game.Constructions = (Constructions)app.ResourceManager.GetData("constructions@construction.txt");
@@ -133,6 +138,16 @@ namespace Burntime.Remaster.Logic.Generation
             creator.Create(game);
             creator = new LocationCreator();
             creator.Create(game);
+
+            // random extra locations on the original world map
+            if (Info.RandomSites is int siteCount && siteCount > 0)
+            {
+                var siteInfo = RandomSites.ReadMapInfo(game.World, gamdat);
+                var sites = RandomSites.Plan(Burntime.Platform.Math.Random.Next(0, int.MaxValue), siteCount, siteInfo);
+                RandomSites.CreateLocations(game, sites, gamdat);
+                game.World.RandomSites = sites;
+                RandomSites.Apply(game.World.Map.MapData, game.World.Ways.WayData, sites, siteIcons);
+            }
 
             // place npcs
             LoadNPCs(game, gamdat);
@@ -657,6 +672,11 @@ namespace Burntime.Remaster.Logic.Generation
 
             _ = new LogicFactory();
             LogicFactory.SetParameter("mainmap", classic.World.Map);
+
+            // Random sites are not part of the map files: put this game's sites back on the shared
+            // world map and way data (or remove those of a previously played game).
+            RandomSites.Apply(classic.World.Map.MapData, classic.World.Ways.WayData, classic.World.RandomSites,
+                RandomSites.ReadIcons());
 
             // share container for all local player
             Burntime.Framework.States.StateManager sharedContainer = null;
